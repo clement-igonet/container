@@ -1,0 +1,34 @@
+## Example: Docker Compose with Socktainer
+#
+# Use this when third-party tools (Portainer, Watchtower, CI agents)
+# need a classic /var/run/docker.sock with Apple's container runtime.
+#
+# docker compose -f docker-compose.socktainer.yml up -d
+
+services:
+  socktainer:
+    image: alpine/socat
+    container_name: socktainer
+    restart: unless-stopped
+    command: >
+      UNIX-LISTEN:/var/run/docker.sock,fork,reuseaddr,mode=660
+      UNIX-CONNECT:/run/container.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    network_mode: host
+
+  # Example: Portainer connected via socktainer
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    depends_on:
+      - socktainer
+    ports:
+      - "9443:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+volumes:
+  portainer_data:
